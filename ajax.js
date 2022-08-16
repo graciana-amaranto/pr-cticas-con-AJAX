@@ -109,7 +109,7 @@
     const $axios = document.getElementById("axios"),
         $fragment = document.createDocumentFragment();
     
-    axios.get("https://jsonplaceholder.typicode.com/user")
+    axios.get("https://jsonplaceholder.typicode.com/users")
     .then(res => {
         let json = res.data;  //con axios NO necesito validar ni usar parse o json para convertir a objeto: ya viene parseado en .data
         
@@ -129,4 +129,33 @@
     .finally(
         //esto se ejecutara indep. del resultado del axios
     );
+})();
+
+//Axios + Async-Await
+(() =>{
+    const $axiosAsync = document.getElementById("axios-async"),
+        $fragment = document.createDocumentFragment();
+    
+    async function getData(){
+        try {
+            let res = await axios.get("https://jsonplaceholder.typicode.com/users"),
+                json = await res.data; //de nuevo, no necesito validar ni parsear, directamente paso el obj a la variable
+                
+                json.forEach(el => { //por cada elemento que tenga el objeto con la info, creame un li con el nombre, email y tel.
+                    const $li = document.createElement("li");
+                    $li.innerHTML = `${el.name} -- ${el.email} -- ${el.phone} `;
+                    $fragment.appendChild($li);  
+                });  
+        
+                $axiosAsync.appendChild($fragment);
+        } catch (err){
+            let message = err.response.statusText || "Ocurrio un error";
+            $axiosAsync.innerHTML = `Error ${err.response.status}: ${message} `; 
+        } finally {
+            //esto se ejecutara indep. del resultado del axios
+        }
+    }
+
+    getData();
+
 })();
