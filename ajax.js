@@ -69,3 +69,37 @@
     El primer then valida si existe la pagina, y es true, convierte el json a objeto (podria ser json a texto)
     El segundo then hace toda la logica*/
 })();
+
+//API Fetch + Async-Await
+(() =>{
+    const $fetchAsync = document.getElementById("fetch-async"),
+        $fragment = document.createDocumentFragment();
+
+    async function getData(){
+        try {
+            let res = await fetch("https://jsonplaceholder.typicode.com/users"), //con await no necesito varios then()
+                json = await res.json(); //convierte json a objeto
+            
+            if (!res.ok) throw {status: res.status, statusText: res.statusText} //si me da error, "throw" me manda al catch, acá le mando un objeto con la info del status 
+
+            json.forEach(el => { //por cada elemento que tenga el objeto con la info, creame un li con el nombre, email y tel.
+                const $li = document.createElement("li");
+                $li.innerHTML = `${el.name} -- ${el.email} -- ${el.phone} `;
+                $fragment.appendChild($li);  
+            });
+        
+            $fetchAsync.appendChild($fragment);
+            
+        } catch (err) {
+            let message = err.statusText || "Ocurrio un error";
+            $fetchAsync.innerHTML = `Error ${err.status}: ${message} `;
+
+
+        } finally {
+            //esto se ejecuta independientemente del try y catch
+        }
+    }
+
+    getData();
+
+})();
