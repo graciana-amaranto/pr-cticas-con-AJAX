@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRUD API REST AJAX</title>
+</head>
+<body>
+    <h1>CRUD API REST AJAX</h1>
+    <section class="crud">
+        <article><h2 class="crud-title">Agregar Santo</h2>
+            <form class="crud-form">
+                <input type="text" name="nombre" placeholder="nombre" required>
+                <br>
+                <input type="text" name="constelacion" placeholder="constelacion" required>
+                <br>
+                <input type="submit" value="Enviar">
+                <input type="hidden" name="id">
+            </form>
+        </article>
+        <article>
+            <h2>Ver Santos</h2>
+            <table class="crud-table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Constelacion</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </article>
+    </section>
+    <template id="crud-template">
+        <tr>
+            <td class="name"></td>
+            <td class="constellation"></td>
+            <td>
+                <button class="edit">Editar</button>
+                <button class="delete">Eliminar</button>
+            </td>
+        </tr>
+    </template>
+    <script>
+        const d = document,
+            $table = d.querySelector(".crud-table"),
+            $form = d.querySelector(".crud-form"),
+            $title = d.querySelector(".crud-title"),
+            $template = d.getElementById("crud-template").content,
+            $fragment = d.createDocumentFragment();
+
+        const ajax = (options) =>{
+            let {url, method, success, error, data} = options;
+            const xhr = new XMLHttpRequest();
+
+            xhr.addEventListener("readystatechange", e => {
+                if(xhr.readyState !==4) return;
+                if(xhr.status >= 200 & xhr.status < 300){
+                    let json = JSON.parse(xhr.responseText);  //si recibo info de un web server, siempre es un string. JSON.parse() lo convierte a objeto
+                    success(json);
+                }else{
+                    let message = xhr.statusText || "Ocurrio un error";
+                    error(`Error ${xhr.status}: ${message}`);
+                }
+
+            });
+
+            xhr.open(method || "GET", url);
+            xhr.setRequestHeader("Content-type", "application/json; charset=utf-8"); //necesito una cabecera que le indique al server que espere un json 
+            xhr.send(JSON.stringify(data)); //le envio json pero lo convierto a cadena de texto (lo contrario al ejercicio base)
+        }
+
+        const getAll = () => {
+            ajax( {
+                //method: "GET",   si quiero usar get no es necesario especificar porque lo puse como default
+                url: "http://localhost:5000/santos",
+                success: (res) => {  //success tiene cargado un objeto con los elementos
+                    console.log(res);
+                    res.forEach( el=> {
+                        $template.querySelector(".name").textContent = el.nombre;
+                        $template.querySelector(".constellation").textContent = el.constelacion;
+                        
+                        $template.querySelector(".edit").dataset.id = el.id;
+                        $template.querySelector(".edit").dataset.name = el.nombre;
+                        $template.querySelector(".edit").dataset.constellation = el.constelacion;
+
+                        $template.querySelector(".delete").dataset.id = el.id;
+
+                        let $clone = d.importNode($template,true); //false sirve para cargar el template vacio
+                        $fragment.appendChild($clone);
+                    });
+
+                    $table.querySelector("tbody").appendChild($fragment);
+                },
+                error: (err) => {
+                    console.warn(err);
+                    $table.insertAdjacentHTML("afterend", `<p><b>${err}</b></p>`)
+
+                    
+                },
+                data: null  //no es necesario porque me trae todos los datos, no uno especifico
+            })
+        }
+
+        d.addEventListener("DOMContentLoaded", getAll);
+
+        d.addEventListener("submit", e =>{
+            if (e.target === $form) {
+                e.preventDefault();
+
+                if(!e.target.id.value){  //si no exite el id, significa que debo CREAR un nuevo personaje
+                    //create - POST
+                    ajax({
+                        url: "http://localhost:5000/santos",
+                        method: "POST",
+                        success: (res) => location.reload(),  //quiero que se recargue la pagina una vez que creo un nuevo pj.
+                        error: (err) => $form.insertAdjacentHTML("afterend", `<p><b>${err}</b></p>`),
+                        data: {
+                            nombre: e.target.nombre.value,  //es lo que escribio el usuario en el input
+                            constelacion: e.target.constelacion.value
+                        }
+                    })
+                } else {  //si ya existe el id, quiero MODIFICAR el personaje
+                    //update - PUT
+                    ajax({
+                        url: `http://localhost:5000/santos/${e.target.id.value}`,  //es el input hidden que guarda el id
+                        method: "PUT",
+                        success: (res) => location.reload(),  //quiero que se recargue la pagina una vez que creo un nuevo pj.
+                        error: (err) => $form.insertAdjacentHTML("afterend", `<p><b>${err}</b></p>`),
+                        data: {
+                            nombre: e.target.nombre.value,  //es lo que escribio el usuario en el input
+                            constelacion: e.target.constelacion.value
+                        }
+                    })
+
+                }
+            }
+        });
+
+        d.addEventListener("click", e =>{
+            if(e.target.matches(".edit")) {
+                console.warn("Presionaste el boton Editar");
+                $title.textContent = "Editar Santo";   
+                $form.nombre.value = e.target.dataset.name;  //me lleva el contenido textual de la tabla al input 
+                $form.constelacion.value = e.target.dataset.constellation;
+                $form.id.value = e.target.dataset.id;  //me manda el id del personaje al input, sirve para validar si uso CREATE O UPDATE (113)
+
+            }
+
+            if(e.target.matches(".delete")){
+                let isDelete = confirm(`¿Estás seguro de eliminar el id ${e.target.dataset.id}?`);
+                if (isDelete){
+                    //delete - DELETE
+                    ajax({
+                        url: `http://localhost:5000/santos/${e.target.dataset.id}`,  //es el input hidden que guarda el id
+                        method: "DELETE",
+                        success: (res) => location.reload(),  //quiero que se recargue la pagina una vez que creo un nuevo pj.
+                        error: (err) => alert(err),
+                        //data no necesito porque borro todo
+                        
+                    })
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
